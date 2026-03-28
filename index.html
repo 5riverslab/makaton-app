@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Tell Us What You Want</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Arial Rounded MT Bold', Arial, sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: #4a90d9;
+      color: white;
+      text-align: center;
+      padding: 16px 12px 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    }
+
+    header h1 {
+      font-size: clamp(20px, 5vw, 30px);
+      letter-spacing: 1px;
+    }
+
+    .categories {
+      display: flex;
+      overflow-x: auto;
+      gap: 8px;
+      padding: 12px 12px 0;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .categories::-webkit-scrollbar { display: none; }
+
+    .cat-btn {
+      flex-shrink: 0;
+      padding: 10px 20px;
+      border: 3px solid #4a90d9;
+      border-radius: 30px;
+      background: white;
+      color: #4a90d9;
+      font-size: 16px;
+      font-weight: bold;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .cat-btn.active, .cat-btn:active {
+      background: #4a90d9;
+      color: white;
+      transform: scale(0.97);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 16px 10px 14px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border: 3px solid transparent;
+      transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-height: 140px;
+      justify-content: center;
+    }
+
+    .card:active, .card.pressed {
+      transform: scale(0.94);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+      border-color: #4a90d9;
+    }
+
+    .card .icon {
+      font-size: 56px;
+      line-height: 1;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
+    }
+
+    .card .label {
+      font-size: 15px;
+      font-weight: bold;
+      color: #333;
+      line-height: 1.2;
+    }
+
+    /* Category colours */
+    .card[data-cat="needs"] { border-top: 5px solid #e74c3c; }
+    .card[data-cat="food"]  { border-top: 5px solid #2ecc71; }
+    .card[data-cat="drink"] { border-top: 5px solid #3498db; }
+    .card[data-cat="activity"] { border-top: 5px solid #f39c12; }
+    .card[data-cat="feeling"]  { border-top: 5px solid #9b59b6; }
+
+    /* Pulse animation when tapped */
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(74, 144, 217, 0.6); }
+      70%  { box-shadow: 0 0 0 18px rgba(74, 144, 217, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(74, 144, 217, 0); }
+    }
+
+    .card.speaking {
+      animation: pulse 0.6s ease-out;
+      border-color: #4a90d9 !important;
+    }
+
+    .banner {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #2c3e50;
+      color: white;
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-size: 22px;
+      font-weight: bold;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 200;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .banner.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>What do you want?</h1>
+</header>
+
+<div class="categories" id="categories"></div>
+<div class="grid" id="grid"></div>
+<div class="banner" id="banner"></div>
+
+<script>
+  const cards = [
+    // Needs
+    { label: "Toilet",    icon: "🚽", cat: "needs",    speak: "Toilet" },
+    { label: "Help",      icon: "✋", cat: "needs",    speak: "Help please" },
+    { label: "Hurt",      icon: "🤕", cat: "needs",    speak: "I am hurt" },
+    { label: "Tired",     icon: "😴", cat: "needs",    speak: "I am tired" },
+    { label: "Too hot",   icon: "🥵", cat: "needs",    speak: "I am too hot" },
+    { label: "Too cold",  icon: "🥶", cat: "needs",    speak: "I am too cold" },
+    { label: "Stop",      icon: "🛑", cat: "needs",    speak: "Stop" },
+    { label: "More",      icon: "👐", cat: "needs",    speak: "More please" },
+    { label: "Finished",  icon: "✅", cat: "needs",    speak: "I am finished" },
+
+    // Food
+    { label: "Food",      icon: "🍽️", cat: "food",     speak: "I want food" },
+    { label: "Apple",     icon: "🍎", cat: "food",     speak: "Apple" },
+    { label: "Banana",    icon: "🍌", cat: "food",     speak: "Banana" },
+    { label: "Orange",    icon: "🍊", cat: "food",     speak: "Orange" },
+    { label: "Grapes",    icon: "🍇", cat: "food",     speak: "Grapes" },
+    { label: "Bread",     icon: "🍞", cat: "food",     speak: "Bread" },
+    { label: "Biscuit",   icon: "🍪", cat: "food",     speak: "Biscuit" },
+    { label: "Crisps",    icon: "🥔", cat: "food",     speak: "Crisps" },
+    { label: "Chocolate", icon: "🍫", cat: "food",     speak: "Chocolate" },
+    { label: "Yoghurt",   icon: "🥛", cat: "food",     speak: "Yoghurt" },
+    { label: "Sandwich",  icon: "🥪", cat: "food",     speak: "Sandwich" },
+
+    // Drink
+    { label: "Drink",     icon: "🥤", cat: "drink",    speak: "I want a drink" },
+    { label: "Water",     icon: "💧", cat: "drink",    speak: "Water" },
+    { label: "Milk",      icon: "🍼", cat: "drink",    speak: "Milk" },
+    { label: "Juice",     icon: "🧃", cat: "drink",    speak: "Juice" },
+    { label: "Tea",       icon: "☕", cat: "drink",    speak: "Tea" },
+
+    // Activities
+    { label: "Car",       icon: "🚗", cat: "activity", speak: "Car" },
+    { label: "Walk",      icon: "🚶", cat: "activity", speak: "Walk" },
+    { label: "Outside",   icon: "🌳", cat: "activity", speak: "I want to go outside" },
+    { label: "TV",        icon: "📺", cat: "activity", speak: "TV" },
+    { label: "Music",     icon: "🎵", cat: "activity", speak: "Music" },
+    { label: "Bath",      icon: "🛁", cat: "activity", speak: "Bath" },
+    { label: "Play",      icon: "🎮", cat: "activity", speak: "Play" },
+    { label: "Swim",      icon: "🏊", cat: "activity", speak: "Swimming" },
+    { label: "Park",      icon: "⛲", cat: "activity", speak: "Park" },
+    { label: "Sleep",     icon: "🛏️", cat: "activity", speak: "I want to sleep" },
+
+    // Feelings
+    { label: "Happy",     icon: "😊", cat: "feeling",  speak: "I am happy" },
+    { label: "Sad",       icon: "😢", cat: "feeling",  speak: "I am sad" },
+    { label: "Angry",     icon: "😡", cat: "feeling",  speak: "I am angry" },
+    { label: "Scared",    icon: "😨", cat: "feeling",  speak: "I am scared" },
+    { label: "Bored",     icon: "😑", cat: "feeling",  speak: "I am bored" },
+    { label: "Excited",   icon: "🤩", cat: "feeling",  speak: "I am excited" },
+  ];
+
+  const catLabels = {
+    all:      "All",
+    needs:    "Needs",
+    food:     "Food",
+    drink:    "Drink",
+    activity: "Activities",
+    feeling:  "Feelings",
+  };
+
+  const catOrder = ["all", "needs", "food", "drink", "activity", "feeling"];
+
+  let activecat = "all";
+  let bannerTimer = null;
+
+  function buildCategories() {
+    const container = document.getElementById("categories");
+    catOrder.forEach(cat => {
+      const btn = document.createElement("button");
+      btn.className = "cat-btn" + (cat === activecat ? " active" : "");
+      btn.textContent = catLabels[cat];
+      btn.dataset.cat = cat;
+      btn.addEventListener("click", () => {
+        activecat = cat;
+        document.querySelectorAll(".cat-btn").forEach(b => b.classList.toggle("active", b.dataset.cat === cat));
+        buildGrid();
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  function buildGrid() {
+    const grid = document.getElementById("grid");
+    grid.innerHTML = "";
+    const filtered = activecat === "all" ? cards : cards.filter(c => c.cat === activecat);
+    filtered.forEach(card => {
+      const el = document.createElement("div");
+      el.className = "card";
+      el.dataset.cat = card.cat;
+      el.innerHTML = `<div class="icon">${card.icon}</div><div class="label">${card.label}</div>`;
+      el.addEventListener("click", () => tap(el, card));
+      el.addEventListener("touchstart", e => { e.preventDefault(); tap(el, card); }, { passive: false });
+      grid.appendChild(el);
+    });
+  }
+
+  function tap(el, card) {
+    el.classList.remove("speaking");
+    void el.offsetWidth;
+    el.classList.add("speaking");
+    setTimeout(() => el.classList.remove("speaking"), 700);
+
+    showBanner(card.icon + "  " + card.label);
+    speak(card.speak);
+  }
+
+  function showBanner(text) {
+    const banner = document.getElementById("banner");
+    banner.textContent = text;
+    banner.classList.add("show");
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => banner.classList.remove("show"), 2500);
+  }
+
+  function speak(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = "en-GB";
+    utt.rate = 0.85;
+    utt.pitch = 1.1;
+    utt.volume = 1;
+
+    // Try to pick a clear, child-friendly voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+      v.lang.startsWith("en") && (v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Karen"))
+    ) || voices.find(v => v.lang.startsWith("en"));
+    if (preferred) utt.voice = preferred;
+
+    window.speechSynthesis.speak(utt);
+  }
+
+  // Voices may load async
+  if (window.speechSynthesis) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => {};
+  }
+
+  buildCategories();
+  buildGrid();
+</script>
+</body>
+</html>
