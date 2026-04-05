@@ -1,0 +1,11 @@
+services:
+  makaton-app:
+    build: .
+    container_name: makaton-app
+    restart: unless-stopped
+    ports:
+      - "8234:80"
+    labels:
+      net.unraid.docker.managed: "composeman"
+      net.unraid.docker.webui: "http://[IP]:[PORT:8234]"
+      net.unraid.docker.icon: "https://raw.githubusercontent.com/5riverslab/makaton-app/main/icon.png"
