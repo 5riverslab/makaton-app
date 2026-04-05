@@ -1,6 +1,6 @@
 services:
   makaton-app:
-    build: .
+    image: ghcr.io/5riverslab/makaton-app:latest
     container_name: makaton-app
     restart: unless-stopped
     ports:
